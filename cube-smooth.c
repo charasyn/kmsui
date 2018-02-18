@@ -76,15 +76,10 @@ static const GLfloat vColors[] = {
 
 static void draw_cube_smooth(unsigned i)
 {
-	ESMatrix modelview;
-
+	(void)i;
 	/* clear the color buffer */
 	glClearColor(0.5, 0.5, 0.5, 1.0);
 	glClear(GL_COLOR_BUFFER_BIT);
-
-	ESMatrix projection;
-	esMatrixLoadIdentity(&projection);
-	esFrustum(&projection, -2.8f, +2.8f, -2.8f * gl.aspect, +2.8f * gl.aspect, 6.0f, 10.0f);
 
 	glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
 }
@@ -107,7 +102,7 @@ const struct egl * init_cube_smooth(const struct gbm *gbm)
 
 	glMatrixMode(GL_PROJECTION);
 	glLoadIdentity();
-	glOrtho(0, gbm->width, gbm->height, 0, -1, 1);
+	glOrthof(0, gbm->width, gbm->height, 0, -1, 1);
 
 	glVertexPointer(2, GL_FLOAT, 0, vVertices);
 	glColorPointer(4, GL_FLOAT, 0, vColors);
