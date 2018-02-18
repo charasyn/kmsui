@@ -25,7 +25,7 @@
 #include <stdlib.h>
 
 #include "common.h"
-#include "esUtil.h"
+//#include "esUtil.h"
 
 
 struct {
@@ -35,36 +35,10 @@ struct {
 } gl;
 
 static const GLfloat vVertices[] = {
-		// front
-		-1.0f, -1.0f, +1.0f,
-		+1.0f, -1.0f, +1.0f,
-		-1.0f, +1.0f, +1.0f,
-		+1.0f, +1.0f, +1.0f,
-		// back
-		+1.0f, -1.0f, -1.0f,
-		-1.0f, -1.0f, -1.0f,
-		+1.0f, +1.0f, -1.0f,
-		-1.0f, +1.0f, -1.0f,
-		// right
-		+1.0f, -1.0f, +1.0f,
-		+1.0f, -1.0f, -1.0f,
-		+1.0f, +1.0f, +1.0f,
-		+1.0f, +1.0f, -1.0f,
-		// left
-		-1.0f, -1.0f, -1.0f,
-		-1.0f, -1.0f, +1.0f,
-		-1.0f, +1.0f, -1.0f,
-		-1.0f, +1.0f, +1.0f,
-		// top
-		-1.0f, +1.0f, +1.0f,
-		+1.0f, +1.0f, +1.0f,
-		-1.0f, +1.0f, -1.0f,
-		+1.0f, +1.0f, -1.0f,
-		// bottom
-		-1.0f, -1.0f, -1.0f,
-		+1.0f, -1.0f, -1.0f,
-		-1.0f, -1.0f, +1.0f,
-		+1.0f, -1.0f, +1.0f,
+		 10.0f,  10.0f,
+		100.0f,  10.0f,
+		 10.0f, 100.0f,
+		100.0f, 100.0f,
 };
 
 static const GLfloat vColors[] = {
@@ -100,39 +74,6 @@ static const GLfloat vColors[] = {
 		1.0f,  0.0f,  1.0f,  1.0f, // magenta
 };
 
-static const GLfloat vNormals[] = {
-		// front
-		+0.0f, +0.0f, +1.0f, // forward
-		+0.0f, +0.0f, +1.0f, // forward
-		+0.0f, +0.0f, +1.0f, // forward
-		+0.0f, +0.0f, +1.0f, // forward
-		// back
-		+0.0f, +0.0f, -1.0f, // backward
-		+0.0f, +0.0f, -1.0f, // backward
-		+0.0f, +0.0f, -1.0f, // backward
-		+0.0f, +0.0f, -1.0f, // backward
-		// right
-		+1.0f, +0.0f, +0.0f, // right
-		+1.0f, +0.0f, +0.0f, // right
-		+1.0f, +0.0f, +0.0f, // right
-		+1.0f, +0.0f, +0.0f, // right
-		// left
-		-1.0f, +0.0f, +0.0f, // left
-		-1.0f, +0.0f, +0.0f, // left
-		-1.0f, +0.0f, +0.0f, // left
-		-1.0f, +0.0f, +0.0f, // left
-		// top
-		+0.0f, +1.0f, +0.0f, // up
-		+0.0f, +1.0f, +0.0f, // up
-		+0.0f, +1.0f, +0.0f, // up
-		+0.0f, +1.0f, +0.0f, // up
-		// bottom
-		+0.0f, -1.0f, +0.0f, // down
-		+0.0f, -1.0f, +0.0f, // down
-		+0.0f, -1.0f, +0.0f, // down
-		+0.0f, -1.0f, +0.0f  // down
-};
-
 static void draw_cube_smooth(unsigned i)
 {
 	ESMatrix modelview;
@@ -141,28 +82,11 @@ static void draw_cube_smooth(unsigned i)
 	glClearColor(0.5, 0.5, 0.5, 1.0);
 	glClear(GL_COLOR_BUFFER_BIT);
 
-	esMatrixLoadIdentity(&modelview);
-	esTranslate(&modelview, 0.0f, 0.0f, -8.0f);
-	esRotate(&modelview, 45.0f + (0.25f * i), 1.0f, 0.0f, 0.0f);
-	esRotate(&modelview, 45.0f - (0.5f * i), 0.0f, 1.0f, 0.0f);
-	esRotate(&modelview, 10.0f + (0.15f * i), 0.0f, 0.0f, 1.0f);
-
 	ESMatrix projection;
 	esMatrixLoadIdentity(&projection);
 	esFrustum(&projection, -2.8f, +2.8f, -2.8f * gl.aspect, +2.8f * gl.aspect, 6.0f, 10.0f);
 
-	glMatrixMode(GL_MODELVIEW);
-	glLoadMatrixf((GLfloat *)modelview.m);
-
-	glMatrixMode(GL_PROJECTION);
-	glLoadMatrixf((GLfloat *)projection.m);
-
 	glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
-	glDrawArrays(GL_TRIANGLE_STRIP, 4, 4);
-	glDrawArrays(GL_TRIANGLE_STRIP, 8, 4);
-	glDrawArrays(GL_TRIANGLE_STRIP, 12, 4);
-	glDrawArrays(GL_TRIANGLE_STRIP, 16, 4);
-	glDrawArrays(GL_TRIANGLE_STRIP, 20, 4);
 }
 
 const struct egl * init_cube_smooth(const struct gbm *gbm)
@@ -178,7 +102,14 @@ const struct egl * init_cube_smooth(const struct gbm *gbm)
 	glViewport(0, 0, gbm->width, gbm->height);
 	glEnable(GL_CULL_FACE);
 
-	glVertexPointer(3, GL_FLOAT, 0, vVertices);
+	glMatrixMode(GL_MODELVIEW);
+	glLoadIdentity();
+
+	glMatrixMode(GL_PROJECTION);
+	glLoadIdentity();
+	glOrtho(0, gbm->width, gbm->height, 0, -1, 1);
+
+	glVertexPointer(2, GL_FLOAT, 0, vVertices);
 	glColorPointer(4, GL_FLOAT, 0, vColors);
 	glEnableClientState(GL_VERTEX_ARRAY);
 	glEnableClientState(GL_COLOR_ARRAY);
