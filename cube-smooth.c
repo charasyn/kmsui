@@ -102,12 +102,20 @@ const struct egl * init_cube_smooth(const struct gbm *gbm)
 
 	glMatrixMode(GL_PROJECTION);
 	glLoadIdentity();
-	glOrthof(0, gbm->width, gbm->height, 0, -1, 1);
+	glOrthof(0, gbm->width, 0, gbm->height, 1, -1);
 
 	glVertexPointer(2, GL_FLOAT, 0, vVertices);
 	glColorPointer(4, GL_FLOAT, 0, vColors);
 	glEnableClientState(GL_VERTEX_ARRAY);
 	glEnableClientState(GL_COLOR_ARRAY);
+
+	{
+		GLenum error = glGetError();
+		while (error) {
+			printf("GL Error during init: %d\n", error);
+			return NULL;
+		}
+	}
 
 	gl.egl.draw = draw_cube_smooth;
 
