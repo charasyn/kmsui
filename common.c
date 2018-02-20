@@ -31,41 +31,13 @@
 
 static struct gbm gbm;
 
-#ifdef HAVE_GBM_MODIFIERS
-static int
-get_modifiers(uint64_t **mods)
-{
-	/* Assumed LINEAR is supported everywhere */
-	static uint64_t modifiers[] = {DRM_FORMAT_MOD_LINEAR};
-	*mods = modifiers;
-	return 1;
-}
-#endif
-
-const struct gbm * init_gbm(int drm_fd, int w, int h, uint64_t modifier)
+const struct gbm * init_gbm(int drm_fd, int w, int h)
 {
 	gbm.dev = gbm_create_device(drm_fd);
 
-#ifndef HAVE_GBM_MODIFIERS
-	if (modifier != DRM_FORMAT_MOD_INVALID) {
-		fprintf(stderr, "Modifiers requested but support isn't available\n");
-		return NULL;
-	}
 	gbm.surface = gbm_surface_create(gbm.dev, w, h,
 			GBM_FORMAT_XRGB8888,
 			GBM_BO_USE_SCANOUT | GBM_BO_USE_RENDERING);
-#else
-	uint64_t *mods;
-	int count;
-	if (modifier != DRM_FORMAT_MOD_INVALID) {
-		count = 1;
-		mods = &modifier;
-	} else {
-		count = get_modifiers(&mods);
-	}
-	gbm.surface = gbm_surface_create_with_modifiers(gbm.dev, w, h,
-			GBM_FORMAT_XRGB8888, mods, count);
-#endif
 
 	if (!gbm.surface) {
 		printf("failed to create gbm surface\n");
@@ -78,9 +50,67 @@ const struct gbm * init_gbm(int drm_fd, int w, int h, uint64_t modifier)
 	return &gbm;
 }
 
+static int egl_set_config(struct egl *egl, const EGLint * config_attribs) {
+	EGLint n;
+	EGLConfig *configs;
+	if (!eglGetConfigs(egl->display, NULL, 0, &n)) {
+		printf("failed to query number of EGL configs\n");
+		return -1;
+	}
+	configs = malloc(sizeof(EGLConfig)*n);
+	if (!configs || !eglGetConfigs(egl->display, configs, n, &n)) {
+		printf("failed to query configs\n");
+		free(configs);
+		return -1;
+	}
+	for (int i = 0; i < n; i++) {
+		//#define showProp(x) { EGLint tmp = -1; eglGetConfigAttrib(egl->display, configs[i], x, &tmp); printf("configs[%d]: %s = %x\n", i, #x, tmp); }
+		#define showProp(x)
+		showProp(EGL_RED_SIZE);
+		showProp(EGL_GREEN_SIZE);
+		showProp(EGL_BLUE_SIZE);
+		showProp(EGL_ALPHA_SIZE);
+		showProp(EGL_ALPHA_MASK_SIZE);
+		showProp(EGL_BIND_TO_TEXTURE_RGB);
+		showProp(EGL_BIND_TO_TEXTURE_RGBA);
+		showProp(EGL_BUFFER_SIZE);
+		showProp(EGL_COLOR_BUFFER_TYPE);
+		showProp(EGL_CONFIG_CAVEAT);
+		showProp(EGL_CONFIG_ID);
+		showProp(EGL_CONFORMANT);
+		showProp(EGL_DEPTH_SIZE);
+		showProp(EGL_LEVEL);
+		showProp(EGL_LUMINANCE_SIZE);
+		showProp(EGL_MAX_PBUFFER_WIDTH);
+		showProp(EGL_MAX_PBUFFER_HEIGHT);
+		showProp(EGL_MAX_PBUFFER_PIXELS);
+		showProp(EGL_MAX_SWAP_INTERVAL);
+		showProp(EGL_MIN_SWAP_INTERVAL);
+		showProp(EGL_NATIVE_RENDERABLE);
+		showProp(EGL_NATIVE_VISUAL_ID);
+		showProp(EGL_NATIVE_VISUAL_TYPE);
+		showProp(EGL_RENDERABLE_TYPE);
+		showProp(EGL_SAMPLE_BUFFERS);
+		showProp(EGL_SAMPLES);
+		showProp(EGL_STENCIL_SIZE);
+		showProp(EGL_SURFACE_TYPE);
+		showProp(EGL_TRANSPARENT_TYPE);
+		showProp(EGL_TRANSPARENT_RED_VALUE);
+		showProp(EGL_TRANSPARENT_GREEN_VALUE);
+		showProp(EGL_TRANSPARENT_BLUE_VALUE);
+	}
+	free(configs);
+	if (!eglChooseConfig(egl->display, config_attribs, &egl->config, 1, &n) || n != 1) {
+		printf("failed to choose config: %d\n", n);
+		return -1;
+	}
+	return 0;
+}
+
 int init_egl(struct egl *egl, const struct gbm *gbm)
 {
-	EGLint major, minor, n;
+	EGLint major, minor;
+	int ret;
 
 	static const EGLint context_attribs[] = {
 		EGL_CONTEXT_CLIENT_VERSION, 1,
@@ -88,7 +118,6 @@ int init_egl(struct egl *egl, const struct gbm *gbm)
 	};
 
 	static const EGLint config_attribs[] = {
-		EGL_SURFACE_TYPE, EGL_WINDOW_BIT,
 		EGL_RED_SIZE, 1,
 		EGL_GREEN_SIZE, 1,
 		EGL_BLUE_SIZE, 1,
@@ -137,9 +166,9 @@ int init_egl(struct egl *egl, const struct gbm *gbm)
 		return -1;
 	}
 
-	if (!eglChooseConfig(egl->display, config_attribs, &egl->config, 1, &n) || n != 1) {
-		printf("failed to choose config: %d\n", n);
-		return -1;
+	ret = egl_set_config(egl, config_attribs);
+	if (ret) {
+		return ret;
 	}
 
 	egl->context = eglCreateContext(egl->display, egl->config,
@@ -169,83 +198,3 @@ int init_egl(struct egl *egl, const struct gbm *gbm)
 
 	return 0;
 }
-/*
-int create_program(const char *vs_src, const char *fs_src)
-{
-	GLuint vertex_shader, fragment_shader, program;
-	GLint ret;
-
-	vertex_shader = glCreateShader(GL_VERTEX_SHADER);
-
-	glShaderSource(vertex_shader, 1, &vs_src, NULL);
-	glCompileShader(vertex_shader);
-
-	glGetShaderiv(vertex_shader, GL_COMPILE_STATUS, &ret);
-	if (!ret) {
-		char *log;
-
-		printf("vertex shader compilation failed!:\n");
-		glGetShaderiv(vertex_shader, GL_INFO_LOG_LENGTH, &ret);
-		if (ret > 1) {
-			log = malloc(ret);
-			glGetShaderInfoLog(vertex_shader, ret, NULL, log);
-			printf("%s", log);
-		}
-
-		return -1;
-	}
-
-	fragment_shader = glCreateShader(GL_FRAGMENT_SHADER);
-
-	glShaderSource(fragment_shader, 1, &fs_src, NULL);
-	glCompileShader(fragment_shader);
-
-	glGetShaderiv(fragment_shader, GL_COMPILE_STATUS, &ret);
-	if (!ret) {
-		char *log;
-
-		printf("fragment shader compilation failed!:\n");
-		glGetShaderiv(fragment_shader, GL_INFO_LOG_LENGTH, &ret);
-
-		if (ret > 1) {
-			log = malloc(ret);
-			glGetShaderInfoLog(fragment_shader, ret, NULL, log);
-			printf("%s", log);
-		}
-
-		return -1;
-	}
-
-	program = glCreateProgram();
-
-	glAttachShader(program, vertex_shader);
-	glAttachShader(program, fragment_shader);
-
-	return program;
-}
-
-int link_program(unsigned program)
-{
-	GLint ret;
-
-	glLinkProgram(program);
-
-	glGetProgramiv(program, GL_LINK_STATUS, &ret);
-	if (!ret) {
-		char *log;
-
-		printf("program linking failed!:\n");
-		glGetProgramiv(program, GL_INFO_LOG_LENGTH, &ret);
-
-		if (ret > 1) {
-			log = malloc(ret);
-			glGetProgramInfoLog(program, ret, NULL, log);
-			printf("%s", log);
-		}
-
-		return -1;
-	}
-
-	return 0;
-}
-*/

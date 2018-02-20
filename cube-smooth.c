@@ -27,6 +27,9 @@
 #include "common.h"
 //#include "esUtil.h"
 
+#ifndef max
+#define max(a, b) ((a)>(b)?(a):(b))
+#endif
 
 struct {
 	struct egl egl;
@@ -35,53 +38,37 @@ struct {
 } gl;
 
 static const GLfloat vVertices[] = {
-		 10.0f,  10.0f,
-		100.0f,  10.0f,
-		 10.0f, 100.0f,
 		100.0f, 100.0f,
+		400.0f, 100.0f,
+		100.0f, 400.0f,
+		400.0f, 400.0f,
+
+		102.0f, 102.0f,
+		398.0f, 102.0f,
+		102.0f, 125.0f,
+		398.0f, 125.0f,
 };
 
 static const GLfloat vColors[] = {
-		// front
-		0.0f,  0.0f,  1.0f,  1.0f, // blue
-		1.0f,  0.0f,  1.0f,  1.0f, // magenta
-		0.0f,  1.0f,  1.0f,  1.0f, // cyan
-		1.0f,  1.0f,  1.0f,  1.0f, // white
-		// back
-		1.0f,  0.0f,  0.0f,  1.0f, // red
-		0.0f,  0.0f,  0.0f,  1.0f, // black
-		1.0f,  1.0f,  0.0f,  1.0f, // yellow
-		0.0f,  1.0f,  0.0f,  1.0f, // green
-		// right
-		1.0f,  0.0f,  1.0f,  1.0f, // magenta
-		1.0f,  0.0f,  0.0f,  1.0f, // red
-		1.0f,  1.0f,  1.0f,  1.0f, // white
-		1.0f,  1.0f,  0.0f,  1.0f, // yellow
-		// left
-		0.0f,  0.0f,  0.0f,  1.0f, // black
-		0.0f,  0.0f,  1.0f,  1.0f, // blue
-		0.0f,  1.0f,  0.0f,  1.0f, // green
-		0.0f,  1.0f,  1.0f,  1.0f, // cyan
-		// top
-		0.0f,  1.0f,  1.0f,  1.0f, // cyan
-		1.0f,  1.0f,  1.0f,  1.0f, // white
-		0.0f,  1.0f,  0.0f,  1.0f, // green
-		1.0f,  1.0f,  0.0f,  1.0f, // yellow
-		// bottom
-		0.0f,  0.0f,  0.0f,  1.0f, // black
-		1.0f,  0.0f,  0.0f,  1.0f, // red
-		0.0f,  0.0f,  1.0f,  1.0f, // blue
-		1.0f,  0.0f,  1.0f,  1.0f, // magenta
+		0.75f,0.75f,0.75f,1.0f,
+		0.75f,0.75f,0.75f,1.0f,
+		0.75f,0.75f,0.75f,1.0f,
+		0.75f,0.75f,0.75f,1.0f,
+		0.00f,0.10f,0.80f,1.0f,
+		0.00f,0.10f,0.50f,1.0f,
+		0.00f,0.10f,0.80f,1.0f,
+		0.00f,0.10f,0.50f,1.0f,
 };
 
 static void draw_cube_smooth(unsigned i)
 {
 	(void)i;
 	/* clear the color buffer */
-	glClearColor(0.5, 0.5, 0.5, 1.0);
+	glClearColor(0.0, 0.0, 0.0, 1.0);
 	glClear(GL_COLOR_BUFFER_BIT);
 
 	glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
+	glDrawArrays(GL_TRIANGLE_STRIP, 4, 4);
 }
 
 const struct egl * init_cube_smooth(const struct gbm *gbm)
@@ -95,14 +82,14 @@ const struct egl * init_cube_smooth(const struct gbm *gbm)
 	gl.aspect = (GLfloat)(gbm->height) / (GLfloat)(gbm->width);
 
 	glViewport(0, 0, gbm->width, gbm->height);
-	glEnable(GL_CULL_FACE);
+	glDisable(GL_CULL_FACE);
 
 	glMatrixMode(GL_MODELVIEW);
 	glLoadIdentity();
 
 	glMatrixMode(GL_PROJECTION);
 	glLoadIdentity();
-	glOrthof(0, gbm->width, 0, gbm->height, 1, -1);
+	glOrthof(0, gbm->width, gbm->height, 0, 1, -1);
 
 	glVertexPointer(2, GL_FLOAT, 0, vVertices);
 	glColorPointer(4, GL_FLOAT, 0, vColors);

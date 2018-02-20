@@ -32,23 +32,17 @@
 #include "common.h"
 #include "drm-common.h"
 
-#ifdef HAVE_GST
-#include <gst/gst.h>
-GST_DEBUG_CATEGORY(kmscube_debug);
-#endif
-
 #define ARRAY_SIZE(arr) (sizeof(arr) / sizeof((arr)[0]))
 
 static const struct egl *egl;
 static const struct gbm *gbm;
 static const struct drm *drm;
 
-static const char *shortopts = "AD:M:m:V:";
+static const char *shortopts = "AD";
 
 static const struct option longopts[] = {
 	{"atomic", no_argument,       0, 'A'},
 	{"device", required_argument, 0, 'D'},
-	{"modifier", required_argument, 0, 'm'},
 	{0, 0, 0, 0}
 };
 
@@ -59,21 +53,14 @@ static void usage(const char *name)
 			"options:\n"
 			"    -A, --atomic             use atomic modesetting and fencing\n"
 			"    -D, --device=DEVICE      use the given device\n"
-			"    -m, --modifier=MODIFIER  hardcode the selected modifier\n"
 			, name);
 }
 
 int main(int argc, char *argv[])
 {
 	const char *device = "/dev/dri/card0";
-	uint64_t modifier = DRM_FORMAT_MOD_INVALID;
 	int atomic = 0;
 	int opt;
-
-#ifdef HAVE_GST
-	gst_init(&argc, &argv);
-	GST_DEBUG_CATEGORY_INIT(kmscube_debug, "kmscube", 0, "kmscube video pipeline");
-#endif
 
 	while ((opt = getopt_long_only(argc, argv, shortopts, longopts, NULL)) != -1) {
 		switch (opt) {
@@ -82,9 +69,6 @@ int main(int argc, char *argv[])
 			break;
 		case 'D':
 			device = optarg;
-			break;
-		case 'm':
-			modifier = strtoull(optarg, NULL, 0);
 			break;
 		default:
 			usage(argv[0]);
@@ -101,8 +85,7 @@ int main(int argc, char *argv[])
 		return -1;
 	}
 
-	gbm = init_gbm(drm->fd, drm->mode->hdisplay, drm->mode->vdisplay,
-			modifier);
+	gbm = init_gbm(drm->fd, drm->mode->hdisplay, drm->mode->vdisplay);
 	if (!gbm) {
 		printf("failed to initialize GBM\n");
 		return -1;
@@ -115,7 +98,7 @@ int main(int argc, char *argv[])
 	}
 
 	/* clear the color buffer */
-	glClearColor(0.5, 0.5, 0.5, 1.0);
+	glClearColor(0.0, 0.0, 0.0, 1.0);
 	glClear(GL_COLOR_BUFFER_BIT);
 
 	return drm->run(gbm, egl);

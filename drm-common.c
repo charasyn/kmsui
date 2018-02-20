@@ -30,8 +30,7 @@
 #include "common.h"
 #include "drm-common.h"
 
-static void
-drm_fb_destroy_callback(struct gbm_bo *bo, void *data)
+static void drm_fb_destroy_callback(struct gbm_bo *bo, void *data)
 {
 	int drm_fd = gbm_device_get_fd(gbm_bo_get_device(bo));
 	struct drm_fb *fb = data;
@@ -60,36 +59,11 @@ struct drm_fb * drm_fb_get_from_bo(struct gbm_bo *bo)
 	width = gbm_bo_get_width(bo);
 	height = gbm_bo_get_height(bo);
 
-#ifdef HAVE_GBM_MODIFIERS
-	uint64_t modifiers[4] = {0};
-	modifiers[0] = gbm_bo_get_modifier(bo);
-	const int num_planes = gbm_bo_get_plane_count(bo);
-	for (int i = 0; i < num_planes; i++) {
-		strides[i] = gbm_bo_get_stride_for_plane(bo, i);
-		handles[i] = gbm_bo_get_handle(bo).u32;
-		offsets[i] = gbm_bo_get_offset(bo, i);
-		modifiers[i] = modifiers[0];
-	}
-
-	if (modifiers[0]) {
-		flags = DRM_MODE_FB_MODIFIERS;
-		printf("Using modifier %llx\n", modifiers[0]);
-	}
-
-	ret = drmModeAddFB2WithModifiers(drm_fd, width, height,
-			DRM_FORMAT_XRGB8888, handles, strides, offsets,
-			modifiers, &fb->fb_id, flags);
-#endif
-	if (ret) {
-		if (flags)
-			fprintf(stderr, "Modifiers failed!\n");
-
-		memcpy(handles, (uint32_t [4]){gbm_bo_get_handle(bo).u32,0,0,0}, 16);
-		memcpy(strides, (uint32_t [4]){gbm_bo_get_stride(bo),0,0,0}, 16);
-		memset(offsets, 0, 16);
-		ret = drmModeAddFB2(drm_fd, width, height, DRM_FORMAT_XRGB8888,
+	memcpy(handles, (uint32_t [4]){gbm_bo_get_handle(bo).u32,0,0,0}, 16);
+	memcpy(strides, (uint32_t [4]){gbm_bo_get_stride(bo),0,0,0}, 16);
+	memset(offsets, 0, 16);
+	ret = drmModeAddFB2(drm_fd, width, height, DRM_FORMAT_XRGB8888,
 				handles, strides, offsets, &fb->fb_id, 0);
-	}
 
 	if (ret) {
 		printf("failed to create fb: %s\n", strerror(errno));
@@ -200,6 +174,12 @@ int init_drm(struct drm *drm, const char *device)
 	if (!drm->mode) {
 		printf("could not find mode!\n");
 		return -1;
+	} else {
+		printf(
+		  "Selected mode: %d x %d\n",
+		  drm->mode->hdisplay,
+		  drm->mode->vdisplay
+		);
 	}
 
 	/* find encoder: */
